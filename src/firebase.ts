@@ -21,8 +21,14 @@ import {
 import firebaseConfig from '../firebase-applet-config.json';
 import { JournalEntry, JournalMessage } from './types';
 
-// Initialize Firebase App singleton
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// 1. Gabungkan isi JSON dengan API Key dari file .env
+const finalFirebaseConfig = {
+  ...firebaseConfig,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+};
+
+// 2. Inisialisasi Firebase App menggunakan config yang sudah diperbarui
+const app = !getApps().length ? initializeApp(finalFirebaseConfig) : getApp();
 
 // Firebase Auth
 export const auth = getAuth(app);
@@ -32,7 +38,7 @@ googleProvider.setCustomParameters({
 });
 
 // Firebase Firestore using configured databaseId
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
+export const db = getFirestore(app, finalFirebaseConfig.firestoreDatabaseId || '(default)');
 
 /**
  * Strips undefined and invalid properties from objects to prevent Firestore write crashes

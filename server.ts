@@ -26,12 +26,11 @@ function getAiClient(): GoogleGenAI {
   return aiClient;
 }
 
-// Fallback Model Ladder as per Resilient Model Fallback Protocol
+// Perbarui ladder fallback dengan model terbaru
 const MODEL_FALLBACK_LADDER = [
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
-  "gemini-flash-latest",
-  "gemini-2.5-pro",
+  "gemini-3.6-flash",      // 1. Model terbaru (sesuai rekomendasi error API)
+  "gemini-2.0-flash",      // 2. Fallback kedua
+  "gemini-2.0-flash-lite", // 3. Fallback ketiga (lebih ringan/cepat)
 ];
 
 interface ChatMessage {
@@ -109,13 +108,14 @@ Guidelines:
     } catch (err: any) {
       console.warn(`[Gemini Fallback] Model ${modelName} failed:`, err?.message || err);
       lastError = err;
-      // Recoverable error: try next model in ladder
       continue;
     }
   }
 
   throw new Error(
-    `All Gemini fallback models exhausted. Last error: ${lastError instanceof Error ? lastError.message : String(lastError)}`
+    `All Gemini fallback models exhausted. Last error: ${
+      lastError instanceof Error ? lastError.message : String(lastError)
+    }`
   );
 }
 
@@ -131,12 +131,16 @@ app.get("/api/health", (_req, res) => {
 // AI Chat & Reflection Generation API
 app.post("/api/journal/chat", async (req, res) => {
   try {
-    // Defensive payload ingestion with null-safe fallback
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const history: ChatMessage[] = Array.isArray(body.history)
       ? body.history
-          .filter((h: any) => h && typeof h.content === "string" && (h.role === "user" || h.role === "model"))
+          .filter(
+            (h: any) =>
+              h &&
+              typeof h.content === "string" &&
+              (h.role === "user" || h.role === "model")
+          )
           .map((h: any) => ({
             role: h.role,
             content: String(h.content).slice(0, 10000),
@@ -190,7 +194,7 @@ app.post("/api/journal/suggest-title", async (req, res) => {
 
     try {
       const response = await client.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash", // Ubah dari gemini-2.5-flash / gemini-1.5-flash ke gemini-2.0-flash
         contents: [
           {
             role: "user",
@@ -222,7 +226,6 @@ Journal text:
         if (Array.isArray(parsed.tags)) tags = parsed.tags.map(String).slice(0, 5);
       }
     } catch {
-      // Fallback title generator
       const firstLine = text.split("\n")[0].slice(0, 50);
       title = firstLine.length > 5 ? firstLine : "Daily Reflection";
     }
